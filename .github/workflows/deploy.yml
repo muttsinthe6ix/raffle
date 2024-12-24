@@ -1,0 +1,37 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # Replace 'main' with your branch name if different
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions: # Add this block to ensure correct permissions
+      contents: write
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "21.7.3" # Replace with the version your project requires
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Project
+        run: npm run build # Adjust this to match your build script
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist # Replace './dist' with your build output folder
+          force_orphan: true # Force fresh deployment
