@@ -34,7 +34,7 @@ const FormInput: React.FC<FormInputProps> = ({
         value={value}
         onChange={onChange}
         required={required}
-        className="block w-full px-4 py-2 bg-purple-50 rounded-xl shadow-sm focus:ring-purple-300"
+        className="text-black block w-full px-4 py-2 bg-purple-50 rounded-xl shadow-sm focus:ring-purple-300"
         placeholder={placeholder}
       />
     </div>
