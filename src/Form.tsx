@@ -29,7 +29,7 @@ const Form: FC<FormProps> = ({ onSubmitSuccess }) => {
 
     try {
       const { error } = await supabase
-        .from("raffle_test")
+        .from("raffle_entries_test")
         .insert([{ name, email }]);
       if (error) throw error;
       onSubmitSuccess(); // Call the callback function

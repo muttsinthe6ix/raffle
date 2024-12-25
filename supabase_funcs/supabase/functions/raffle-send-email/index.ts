@@ -1,85 +1,91 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
-
-// Setup type definitions for built-in Supabase Runtime APIs
 import { serve } from "https://deno.land/std@0.182.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js";
 
-console.log("Starting send-email Edge Function...");
+console.log("Starting Edge Function to choose a raffle winner...");
 
 serve(async (req) => {
-  if (req.method !== "POST") {
+  // Only allow GET requests
+  if (req.method !== "GET") {
     console.error(`Invalid request method: ${req.method}`);
     return new Response("Method Not Allowed", { status: 405 });
   }
 
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL"),
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+  );
+
   try {
-    console.log("Parsing request payload...");
+    console.log(
+      "Fetching a random winner from the raffle_entries_test table..."
+    );
 
-    // Parse incoming request
-    const payload = await req.json();
-    console.log("Received payload:", payload);
+    const { data, error } = await supabase
+      .from("raffle_entries_test")
+      .select("*");
 
-    const { email, name } = payload;
-    const SENDER_EMAIL = Deno.env.get("TEST_EMAIL"); // FIXME  use sender email
-
-    // Validate payload
-    if (!email || !name) {
-      console.error("Invalid payload: Missing email or name.");
-      return new Response("Invalid payload", { status: 400 });
+    if (error || !data) {
+      console.error("Error fetching entries:", error);
+      return new Response("Failed to fetch entries", { status: 500 });
     }
 
-    console.log("Payload validated. Preparing email data...");
+    const winner = data[Math.floor(Math.random() * data.length)];
 
-    // Prepare email data for Brevo
+    if (error || !winner) {
+      console.error("Error fetching winner:", error);
+      return new Response("Failed to fetch a winner", { status: 500 });
+    }
+
+    console.log("Winner selected:", winner);
+
+    const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
+    const TEST_EMAIL = Deno.env.get("TEST_EMAIL");
+
+    if (!BREVO_API_KEY || !TEST_EMAIL) {
+      console.error("Missing required environment variables");
+      return new Response("Server configuration error", { status: 500 });
+    }
+
     const emailData = {
-      sender: { email: SENDER_EMAIL, name: "Mutts In The 6ix" },
-      to: [{ email, name }],
-      subject: "Congratulations! You've Won the Raffle!",
-      htmlContent: `<p>Hi <span style="color:#D8BFD8">${name}</span>, congratulations! You have won the Mutts In The 6ix raffle!</p>`,
+      sender: { email: TEST_EMAIL },
+      to: [{ email: winner.email }],
+      subject: "Mutts in the 6ix raffle winner!",
+      htmlContent: `<p>Hello <strong>${winner.name}</strong>,</p><p>We are excited to inform you that you have been selected as a winner in our raffle!</p>`,
     };
 
-    console.log("Email data prepared.", emailData);
+    // Notify partner
+    const partnerNotification = {
+      sender: { email: TEST_EMAIL },
+      to: [{ email: TEST_EMAIL }],
+      subject: "Raffle Winner Selected",
+      htmlContent: `<p>The winner is <strong>${winner.name}</strong> (${winner.email}).</p>`,
+    };
 
-    // Fetch Brevo API key securely from environment variables
-    const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
-    const BREVO_URL = "https://api.brevo.com/v3/smtp/email";
-
-    if (!BREVO_API_KEY) {
-      console.error("Missing Brevo API Key.");
-      return new Response("Internal Server Error: Missing API Key", {
-        status: 500,
+    // Send emails using Brevo API
+    const sendEmail = async (emailData) => {
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": BREVO_API_KEY,
+        },
+        body: JSON.stringify(emailData),
       });
-    }
 
-    console.log("Sending email via Brevo API...");
+      if (!response.ok) {
+        const errorDetails = await response.text();
+        console.error("Failed to send email:", errorDetails);
+        throw new Error("Failed to send email");
+      }
+    };
 
-    // Prepare API request
-    const response = await fetch(BREVO_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "api-key": BREVO_API_KEY,
-      },
-      body: JSON.stringify(emailData),
-    });
+    await sendEmail(emailData);
+    await sendEmail(partnerNotification);
 
-    console.log(`Brevo API response status: ${response.status}`, response);
-
-    // Log response data in case of failure
-    const responseData = await response.text();
-
-    if (!response.ok) {
-      console.error("Brevo API Error:", responseData);
-      return new Response(`Failed to send email: ${responseData}`, {
-        status: 500,
-      });
-    }
-
-    console.log("Email sent successfully!");
-    return new Response("Email sent successfully!", { status: 200 });
+    console.log("Emails sent successfully!");
+    return new Response(`Winner chosen: ${winner.name}`, { status: 200 });
   } catch (error) {
-    console.error("Unhandled error:", error.message);
+    console.error("Unexpected error:", error.message);
     return new Response("Internal Server Error", { status: 500 });
   }
 });
