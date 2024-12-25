@@ -44,7 +44,7 @@ const Form: FC<FormProps> = ({ onSubmitSuccess }) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="max-w-[680px] mx-auto p-[24px] rounded-[32px] bg-opacity-90 bg-white"
+      className="max-w-full mx-auto p-[24px] rounded-[32px] bg-opacity-90 bg-white"
     >
       <h1 className="text-black text-2xl font-bold text-center mb-6">
         Enter the raffle to win a prize!

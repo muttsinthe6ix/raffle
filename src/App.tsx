@@ -30,7 +30,7 @@ const App: React.FC = () => {
         <div className="snowflake">❅</div>
         <div className="snowflake">❆</div>
       </div>
-      <div className="bg-white shadow-glossy p-10 max-w-full w-[960px] rounded-[32px] bg-opacity-50 h-fit">
+      <div className="bg-white shadow-glossy p-6 max-w-full w-[960px] rounded-[32px] bg-opacity-50 h-fit">
         <img
           src="https://muttsinthe6ix.ca/assets/images/image01.png?v=746bd911"
           alt="Mutts In The 6ix"
