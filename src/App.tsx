@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Form from "./Form";
 import "./styles/App.css"; // Import the CSS file for snowflakes
 
@@ -14,7 +14,15 @@ const SuccessMessage: React.FC = () => (
 const App: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  useEffect(() => {
+    const hasSubmitted = localStorage.getItem("raffleSubmitted");
+    if (hasSubmitted) {
+      setIsSubmitted(true);
+    }
+  }, []);
+
   const handleFormSubmitSuccess = () => {
+    localStorage.setItem("raffleSubmitted", "true");
     setIsSubmitted(true);
   };
 

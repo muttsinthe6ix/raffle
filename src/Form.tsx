@@ -1,4 +1,3 @@
-// Form.tsx
 import { FC, FormEvent, useState } from "react";
 import { supabase } from "./supabaseClient";
 import FormInput from "./FormInput";
@@ -11,6 +10,7 @@ const Form: FC<FormProps> = ({ onSubmitSuccess }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -19,6 +19,9 @@ const Form: FC<FormProps> = ({ onSubmitSuccess }) => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (loading || submitted) return; // Prevent multiple submissions
+
     setLoading(true);
 
     if (!validateEmail(email)) {
@@ -32,6 +35,7 @@ const Form: FC<FormProps> = ({ onSubmitSuccess }) => {
         .from("raffle_entries_test")
         .insert([{ name, email }]);
       if (error) throw error;
+      setSubmitted(true); // Mark as submitted
       onSubmitSuccess(); // Call the callback function
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -67,12 +71,12 @@ const Form: FC<FormProps> = ({ onSubmitSuccess }) => {
       />
       <button
         type="submit"
-        disabled={loading}
+        disabled={loading || submitted}
         className={`w-full text-[1.8rem] px-4 py-2 text-white font-bold bg-purple-600 rounded-full shadow-lg transition focus:ring-4 focus:ring-purple-300 ${
-          loading ? "opacity-50 cursor-not-allowed" : "hover:bg-purple-700"
+          loading || submitted ? "opacity-50 cursor-not-allowed" : "hover:bg-purple-700"
         }`}
       >
-        {loading ? "Submitting..." : "Submit"}
+        {loading ? "Submitting..." : submitted ? "Submitted" : "Submit"}
       </button>
     </form>
   );
