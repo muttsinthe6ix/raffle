@@ -1,42 +1,66 @@
-import { serve } from "https://deno.land/std@0.182.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js";
+// Import the required libraries
+import { serve } from "https://deno.land/std@0.155.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-console.log("Starting Edge Function to choose a raffle winner...");
+// Supabase environment variables
+const supabaseUrl = Deno.env.get("SUPABASE_URL");
+const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-serve(async (req) => {
-  // Only allow GET requests
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+}
+
+// Initialize Supabase client
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Edge Function logic
+interface EmailData {
+  sender: { email: string };
+  to: { email: string }[];
+  subject: string;
+  htmlContent: string;
+}
+
+interface RaffleWinner {
+  name: string;
+  email: string;
+}
+
+serve(async (req: Request): Promise<Response> => {
   if (req.method !== "GET") {
     console.error(`Invalid request method: ${req.method}`);
-    return new Response("Method Not Allowed", { status: 405 });
+    return new Response("Invalid request method. Only POST is allowed.", {
+      status: 405,
+    });
   }
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL"),
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-  );
-
   try {
-    console.log(
-      "Fetching a random winner from the raffle_entries_test table..."
+    console.log("Starting Edge Function to pick a random raffle winner...");
+
+    // Call the SQL function `pick_random_winner`
+    const { data, error } = await supabase.rpc<RaffleWinner>(
+      "pick_random_winner"
     );
 
-    const { data, error } = await supabase
-      .from("raffle_entries_test")
-      .select("*");
+    const winner = data[0];
 
-    if (error || !data) {
-      console.error("Error fetching entries:", error);
-      return new Response("Failed to fetch entries", { status: 500 });
+    if (error) {
+      console.error("Error picking random winner:", error);
+      return new Response(
+        JSON.stringify({ error: "Failed to pick a random winner" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    const winner = data[Math.floor(Math.random() * data.length)];
-
-    if (error || !winner) {
-      console.error("Error fetching winner:", error);
-      return new Response("Failed to fetch a winner", { status: 500 });
+    if (!data || data.length === 0) {
+      return new Response(
+        JSON.stringify({
+          message:
+            "No eligible raffle entries found. All participants may have already won.",
+        }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      );
     }
-
-    console.log("Winner selected:", winner);
 
     const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
     const TEST_EMAIL = Deno.env.get("TEST_EMAIL");
@@ -46,15 +70,15 @@ serve(async (req) => {
       return new Response("Server configuration error", { status: 500 });
     }
 
-    const emailData = {
+    const emailData: EmailData = {
       sender: { email: TEST_EMAIL },
       to: [{ email: winner.email }],
-      subject: "Mutts in the 6ix raffle winner!",
-      htmlContent: `<p>Hello <strong>${winner.name}</strong>,</p><p>We are excited to inform you that you have been selected as a winner in our raffle!</p>`,
+      subject: "Congratulations! You're a Mutts in the 6ix Raffle Winner!",
+      htmlContent: `<p>Hi <strong>${winner.name}</strong>,</p><p>We are thrilled to let you know that you have been selected as a winner in our raffle! Thank you for participating and supporting Mutts in the 6ix. We hope this brings a smile to your face!</p>`,
     };
 
     // Notify partner
-    const partnerNotification = {
+    const partnerNotification: EmailData = {
       sender: { email: TEST_EMAIL },
       to: [{ email: TEST_EMAIL }],
       subject: "Raffle Winner Selected",
@@ -62,7 +86,7 @@ serve(async (req) => {
     };
 
     // Send emails using Brevo API
-    const sendEmail = async (emailData) => {
+    const sendEmail = async (emailData: EmailData): Promise<void> => {
       const response = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: {
@@ -82,10 +106,16 @@ serve(async (req) => {
     await sendEmail(emailData);
     await sendEmail(partnerNotification);
 
-    console.log("Emails sent successfully!");
-    return new Response(`Winner chosen: ${winner.name}`, { status: 200 });
-  } catch (error) {
-    console.error("Unexpected error:", error.message);
-    return new Response("Internal Server Error", { status: 500 });
+    // Respond with the winner's details
+    return new Response(JSON.stringify({ winner: data[0] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error("Unexpected error:", err);
+    return new Response(
+      JSON.stringify({ error: "An unexpected error occurred." }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 });
