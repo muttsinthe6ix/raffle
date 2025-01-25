@@ -63,15 +63,15 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
-    const TEST_EMAIL = Deno.env.get("TEST_EMAIL");
+    const SENDER_EMAIL = Deno.env.get("SENDER_EMAIL");
 
-    if (!BREVO_API_KEY || !TEST_EMAIL) {
+    if (!BREVO_API_KEY || !SENDER_EMAIL) {
       console.error("Missing required environment variables");
       return new Response("Server configuration error", { status: 500 });
     }
 
     const emailData: EmailData = {
-      sender: { email: TEST_EMAIL },
+      sender: { email: SENDER_EMAIL },
       to: [{ email: winner.email }],
       subject: "Congratulations! You're a Mutts in the 6ix Raffle Winner!",
       htmlContent: `<p>Hi <strong>${winner.name}</strong>,</p><p>We are thrilled to let you know that you have been selected as a winner in our raffle! Thank you for participating and supporting Mutts in the 6ix. We hope this brings a smile to your face!</p>`,
@@ -79,8 +79,8 @@ serve(async (req: Request): Promise<Response> => {
 
     // Notify partner
     const partnerNotification: EmailData = {
-      sender: { email: TEST_EMAIL },
-      to: [{ email: TEST_EMAIL }],
+      sender: { email: SENDER_EMAIL },
+      to: [{ email: SENDER_EMAIL }],
       subject: "Raffle Winner Selected",
       htmlContent: `<p>The winner is <strong>${winner.name}</strong> (${winner.email}).</p>`,
     };

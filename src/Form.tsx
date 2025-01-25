@@ -32,7 +32,7 @@ const Form: FC<FormProps> = ({ onSubmitSuccess }) => {
 
     try {
       const { error } = await supabase
-        .from("raffle_entries_test")
+        .from("raffle_entries")
         .insert([{ name, email }]);
       if (error) throw error;
       setSubmitted(true); // Mark as submitted
@@ -73,7 +73,9 @@ const Form: FC<FormProps> = ({ onSubmitSuccess }) => {
         type="submit"
         disabled={loading || submitted}
         className={`w-full text-[1.8rem] px-4 py-2 text-white font-bold bg-purple-600 rounded-full shadow-lg transition focus:ring-4 focus:ring-purple-300 ${
-          loading || submitted ? "opacity-50 cursor-not-allowed" : "hover:bg-purple-700"
+          loading || submitted
+            ? "opacity-50 cursor-not-allowed"
+            : "hover:bg-purple-700"
         }`}
       >
         {loading ? "Submitting..." : submitted ? "Submitted" : "Submit"}
