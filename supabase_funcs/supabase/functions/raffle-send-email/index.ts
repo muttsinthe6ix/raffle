@@ -15,8 +15,8 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Edge Function logic
 interface EmailData {
-  sender: { email: string };
-  to: { email: string }[];
+  sender: { email: string; name: string };
+  to: { email: string; name: string }[];
   subject: string;
   htmlContent: string;
 }
@@ -71,16 +71,16 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     const emailData: EmailData = {
-      sender: { email: SENDER_EMAIL },
-      to: [{ email: winner.email }],
+      sender: { email: SENDER_EMAIL, name: "Mutts in the 6ix" },
+      to: [{ email: winner.email, name: winner.name }],
       subject: "Congratulations! You're a Mutts in the 6ix Raffle Winner!",
-      htmlContent: `<p>Hi <strong>${winner.name}</strong>,</p><p>We are thrilled to let you know that you have been selected as a winner in our raffle! Thank you for participating and supporting Mutts in the 6ix. We hope this brings a smile to your face!</p>`,
+      htmlContent: `<p>Hi <strong>${winner.name}</strong>,</p><p>We are thrilled to let you know that you have been selected as a winner in our raffle! Thank you for participating and supporting Mutts in the 6ix. We hope this brings a smile to your face!</p><br><p>We'd love to hear your feedback on the event, please fill out this <a href="https://forms.gle/LzvaJ7UYywM7pwMx7">feedback form</a>!</p><br><p>We'll see you at the event!</p>`,
     };
 
     // Notify partner
     const partnerNotification: EmailData = {
-      sender: { email: SENDER_EMAIL },
-      to: [{ email: SENDER_EMAIL }],
+      sender: { email: SENDER_EMAIL, name: "Mutts in the 6ix" },
+      to: [{ email: SENDER_EMAIL, name: "Mutts in the 6ix" }],
       subject: "Raffle Winner Selected",
       htmlContent: `<p>The winner is <strong>${winner.name}</strong> (${winner.email}).</p>`,
     };
@@ -103,8 +103,8 @@ serve(async (req: Request): Promise<Response> => {
       }
     };
 
-    // await sendEmail(emailData);
-    // await sendEmail(partnerNotification);
+    await sendEmail(emailData);
+    await sendEmail(partnerNotification);
 
     // Respond with the winner's details
     return new Response(JSON.stringify({ winner: data[0] }), {
