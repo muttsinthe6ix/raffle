@@ -29,7 +29,7 @@ interface RaffleWinner {
 serve(async (req: Request): Promise<Response> => {
   if (req.method !== "GET") {
     console.error(`Invalid request method: ${req.method}`);
-    return new Response("Invalid request method. Only POST is allowed.", {
+    return new Response("Invalid request method. Only GET is allowed.", {
       status: 405,
     });
   }
@@ -103,8 +103,8 @@ serve(async (req: Request): Promise<Response> => {
       }
     };
 
-    await sendEmail(emailData);
-    await sendEmail(partnerNotification);
+    // await sendEmail(emailData);
+    // await sendEmail(partnerNotification);
 
     // Respond with the winner's details
     return new Response(JSON.stringify({ winner: data[0] }), {
